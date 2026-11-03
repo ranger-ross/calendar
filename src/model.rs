@@ -1,6 +1,8 @@
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use chrono_tz::Tz;
 
+pub const UPCOMING_DAYS: i64 = 30;
+
 #[derive(Clone, Debug)]
 pub enum EventTime {
     AllDay(NaiveDate),
@@ -36,9 +38,29 @@ pub fn month_range(today: NaiveDate) -> (NaiveDate, NaiveDate) {
     (start, end)
 }
 
+pub fn fetch_range(today: NaiveDate) -> (NaiveDate, NaiveDate) {
+    let (start, end) = month_range(today);
+    (start, end.max(today + Duration::days(UPCOMING_DAYS)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fetch_window_covers_upcoming_events_across_month_and_year_boundaries() {
+        let parse = |date: &str| NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap();
+        for (today, expected_start, expected_end) in [
+            ("2026-02-28", "2026-02-01", "2026-03-30"),
+            ("2026-12-31", "2026-11-29", "2027-01-30"),
+            ("2026-11-03", "2026-11-01", "2026-12-06"),
+        ] {
+            assert_eq!(
+                fetch_range(parse(today)),
+                (parse(expected_start), parse(expected_end))
+            );
+        }
+    }
 
     #[test]
     fn month_grid_covers_exact_full_sunday_first_weeks() {

@@ -16,7 +16,7 @@ use axum::{
 use chrono::{DateTime, NaiveDate, Offset, Utc};
 use clap::{Parser, Subcommand};
 use config::Config;
-use model::{Event, View, month_range};
+use model::{Event, View, fetch_range, month_range};
 use serde::Serialize;
 use std::{
     path::PathBuf,
@@ -143,7 +143,7 @@ async fn synchronize(app: Arc<App>) {
     tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         tick.tick().await;
-        let range = month_range(Utc::now().with_timezone(&app.config.timezone).date_naive());
+        let range = fetch_range(Utc::now().with_timezone(&app.config.timezone).date_naive());
         if attempted_range == Some(range)
             && last_attempt
                 .is_some_and(|last: Instant| last.elapsed().as_secs() < app.config.refresh_seconds)
@@ -175,6 +175,7 @@ async fn index(State(app): State<Arc<App>>) -> Html<String> {
 #[derive(Serialize)]
 struct ViewResponse {
     html: String,
+    upcoming_html: String,
     date: String,
     clock: String,
     now_ms: i64,
@@ -188,6 +189,7 @@ async fn view(State(app): State<Arc<App>>) -> Json<ViewResponse> {
     let view = snapshot.view(&app.config);
     Json(ViewResponse {
         html: ui::calendar(&view),
+        upcoming_html: ui::upcoming(&view),
         date: ui::date(&view),
         clock: ui::clock(&view),
         now_ms: view.now.timestamp_millis(),

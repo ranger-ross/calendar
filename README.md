@@ -9,6 +9,10 @@ A small, single-binary Rust web server for a read-only ICS calendar display. Con
 
 The display shows the current month in seven Sunday-first columns, with the date and a 12-hour clock above it. Seconds are superscript. The first day of each month includes its month name beside the day number. Dark is the default theme; the top-right button switches to light and remembers the choice in that browser. All-day events use filled color bars; timed events show a time range and a color accent. Multi-day events appear on each occupied date.
 
+The relative last-synced time appears beside the theme button only when the last successful sync was more than five minutes ago. It hides again after a successful sync. Loading and update errors remain visible immediately in the same header status area.
+
+The top-right Upcoming panel shows up to three current or upcoming events as compact, static cards that share the full panel width and align with its heading. The soonest event is on the left, with later events extending to the right. Cards use their feed colors and the display timezone and cover 30 calendar days including today, even across month boundaries. Finished events are removed locally as they expire, and the panel requests the next events. All-day events expire at the end of their final date. The panel also refreshes with the calendar every minute and stacks below the clock on narrow screens.
+
 The frontend uses server-rendered HTML, ES5 JavaScript, XMLHttpRequest, and local assets for compatibility with modern and older browsers.
 
 ## Build and configure

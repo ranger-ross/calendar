@@ -32,11 +32,12 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 .dashboard { max-width: 1800px; margin: 0 auto; padding: 20px 26px 16px; }
-.dashboard-header { position: relative; margin-bottom: 15px; }
+.dashboard-header { display: flex; align-items: flex-start; min-height: 100px; margin-bottom: 15px; }
+.clock-panel { width: 50%; }
+.header-panel { width: 47%; margin-left: auto; }
+.header-controls { display: flex; align-items: center; }
 #theme-toggle {
-  position: absolute;
-  top: 0;
-  right: 0;
+  flex: 0 0 auto;
   margin: 0;
   min-height: 32px;
   padding: 6px 12px;
@@ -49,7 +50,7 @@ body {
   cursor: pointer;
 }
 #theme-toggle:hover, #theme-toggle:focus { border-color: var(--accent); color: var(--text); }
-.date { padding-right: 110px; font-size: 20px; line-height: 1.4; letter-spacing: 0.02em; }
+.date { font-size: 20px; line-height: 1.4; letter-spacing: 0.02em; }
 .clock {
   font-size: 66px;
   line-height: 1.1;
@@ -59,13 +60,21 @@ body {
 }
 .clock sup { position: relative; top: -0.12em; margin-left: 5px; font-size: 0.37em; letter-spacing: 0; vertical-align: super; color: var(--muted); }
 .meridiem { font-size: 0.37em; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+#upcoming { margin-top: 6px; }
+#upcoming h2 { margin: 0 0 4px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.upcoming-list { display: flex; margin: 0; padding: 0; list-style: none; }
+.upcoming-event { flex: 1 1 0; min-width: 0; margin-left: 6px; padding: 5px 6px; border: 1px solid var(--line); border-left: 3px solid var(--event-color); border-radius: 5px; background: var(--surface); }
+.upcoming-event:first-child { margin-left: 0; }
+.upcoming-when { display: block; color: var(--muted); font-size: 10px; line-height: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upcoming-title { display: block; font-size: 12px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upcoming-empty { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .legend { margin-bottom: 10px; color: var(--muted); font-size: 11px; line-height: 1.8; }
 .legend-kind, .legend-calendar { display: inline-block; margin-right: 15px; vertical-align: middle; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: baseline; border-radius: 2px; }
 .legend .legend-all-day { width: 14px; background: var(--muted); }
 .legend .legend-timed { width: 14px; border-left: 3px solid var(--muted); background: var(--surface); }
-.month-table { --calendar-overhead: 210px; table-layout: fixed; border-collapse: collapse; width: 100%; }
-.month-table.with-legend { --calendar-overhead: 240px; }
+.month-table { --calendar-overhead: 185px; table-layout: fixed; border-collapse: collapse; width: 100%; }
+.month-table.with-legend { --calendar-overhead: 215px; }
 .month-table th { padding: 0 0 8px 9px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .month-table abbr { text-decoration: none; border: 0; }
 .day { padding: 0; border: 1px solid var(--line); background: var(--surface); vertical-align: top; }
@@ -88,8 +97,7 @@ body {
 .event.timed { border-left: 3px solid var(--event-color); background: var(--background); }
 .event-time { display: block; margin-bottom: 2px; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 .event-title { display: block; }
-footer { margin-top: 8px; }
-#status { color: var(--muted); font-size: 11px; line-height: 1.5; word-wrap: break-word; }
+#status { flex: 1 1 0; min-width: 0; margin-right: 12px; color: var(--muted); font-size: 11px; line-height: 1.5; text-align: right; word-wrap: break-word; }
 #status.has-error { color: var(--error); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
 @media (min-width: 1200px) {
@@ -105,6 +113,13 @@ footer { margin-top: 8px; }
   .event { font-size: 11px; padding: 4px 3px; }
   .event-time { font-size: 9px; }
   .legend-kind, .legend-calendar { margin-right: 10px; }
+}
+@media (max-width: 600px) {
+  .dashboard-header { display: block; min-height: 0; }
+  .clock-panel { width: auto; }
+  .header-panel { width: auto; margin: 12px 0 0; }
+  .month-table { --calendar-overhead: 290px; }
+  .month-table.with-legend { --calendar-overhead: 320px; }
 }
 @media (max-width: 480px) {
   .dashboard { padding: 14px 7px; }

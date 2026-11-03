@@ -1,4 +1,4 @@
-use crate::model::{Event, EventTime, View};
+use crate::model::{Event, EventTime, UPCOMING_DAYS, View};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Offset, Timelike};
 use chrono_tz::Tz;
 use std::fmt::Write;
@@ -44,15 +44,18 @@ fn relative_age(seconds: i64) -> String {
 pub fn page(view: &View) -> String {
     let mut html = String::with_capacity(24_000);
     html.push_str("<!doctype html><html lang=\"en\" data-theme=\"dark\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"theme-color\" content=\"#10151d\"><title>Calendar</title><link rel=\"stylesheet\" href=\"/calendar.css\"></head>");
-    write!(html, "<body data-now-ms=\"{}\" data-offset-seconds=\"{}\"><main class=\"dashboard\"><header class=\"dashboard-header\"><button id=\"theme-toggle\" type=\"button\" aria-label=\"Toggle light theme\" aria-pressed=\"false\">Light theme</button><div id=\"date\" class=\"date\">", view.now.timestamp_millis(), view.now.offset().fix().local_minus_utc()).unwrap();
+    write!(html, "<body data-now-ms=\"{}\" data-offset-seconds=\"{}\"><main class=\"dashboard\"><header class=\"dashboard-header\"><div class=\"clock-panel\"><div id=\"date\" class=\"date\">", view.now.timestamp_millis(), view.now.offset().fix().local_minus_utc()).unwrap();
     escape_into(&mut html, &date(view));
     html.push_str("</div><div id=\"clock\" class=\"clock\" aria-label=\"Current time\">");
     html.push_str(&clock(view));
-    html.push_str("</div></header><section id=\"calendar\" aria-label=\"Monthly calendar\">");
-    html.push_str(&calendar(view));
-    html.push_str("</section><footer><div id=\"status\" role=\"status\" aria-live=\"polite\"");
+    html.push_str("</div></div><div class=\"header-panel\"><div class=\"header-controls\"><div id=\"status\" role=\"status\" aria-live=\"polite\"");
     if view.error.is_some() {
         html.push_str(" class=\"has-error\"");
+    } else if view
+        .updated_at
+        .is_some_and(|updated| view.now.signed_duration_since(updated) <= Duration::minutes(5))
+    {
+        html.push_str(" style=\"visibility:hidden\"");
     }
     html.push_str("><span id=\"status-message\">");
     escape_into(&mut html, &status(view));
@@ -70,9 +73,13 @@ pub fn page(view: &View) -> String {
     } else {
         html.push('>');
     }
+    html.push_str("</span></div><button id=\"theme-toggle\" type=\"button\" aria-label=\"Toggle light theme\" aria-pressed=\"false\">Light theme</button></div><section id=\"upcoming\" aria-label=\"Upcoming events\">");
+    html.push_str(&upcoming(view));
     html.push_str(
-        "</span></div></footer></main><script src=\"/calendar.js\"></script></body></html>",
+        "</section></div></header><section id=\"calendar\" aria-label=\"Monthly calendar\">",
     );
+    html.push_str(&calendar(view));
+    html.push_str("</section></main><script src=\"/calendar.js\"></script></body></html>");
     html
 }
 
@@ -118,6 +125,113 @@ fn span<'a>(event: &'a Event, timezone: Tz) -> Option<Span<'a>> {
         }
         _ => None,
     }
+}
+
+fn upcoming_key<'a>(event: &Span<'a>, view: &View) -> (NaiveDate, i64, &'a str, &'a str) {
+    let (date, instant) = match &event.timed {
+        Some((start, _)) => {
+            let start = start.max(&view.now);
+            (start.date_naive(), start.timestamp())
+        }
+        None => (event.first.max(view.now.date_naive()), i64::MIN),
+    };
+    (date, instant, &event.event.title, &event.event.calendar)
+}
+
+fn upcoming_spans<'a>(view: &View<'a>) -> [Option<Span<'a>>; 3] {
+    let today = view.now.date_naive();
+    let cutoff = today + Duration::days(UPCOMING_DAYS);
+    let mut selected: [Option<Span<'a>>; 3] = [None, None, None];
+    for event in view.events {
+        let Some(candidate) = span(event, view.now.timezone()) else {
+            continue;
+        };
+        if candidate.first >= cutoff || candidate.last < today {
+            continue;
+        }
+        if let Some((start, end)) = &candidate.timed
+            && *end <= view.now
+            && *start < view.now
+        {
+            continue;
+        }
+        let key = upcoming_key(&candidate, view);
+        for index in 0..selected.len() {
+            if selected[index]
+                .as_ref()
+                .is_none_or(|current| key < upcoming_key(current, view))
+            {
+                selected[index..].rotate_right(1);
+                selected[index] = Some(candidate);
+                break;
+            }
+        }
+    }
+    selected
+}
+
+pub fn upcoming(view: &View) -> String {
+    let mut html = String::with_capacity(1_200);
+    html.push_str("<h2>Upcoming</h2>");
+    let selected = upcoming_spans(view);
+    if selected[0].is_none() {
+        let message = if view.updated_at.is_none() {
+            if view.error.is_some() {
+                "Upcoming events unavailable."
+            } else {
+                "Loading events..."
+            }
+        } else {
+            "No upcoming events in the next 30 days."
+        };
+        write!(html, "<p class=\"upcoming-empty\">{message}</p>").unwrap();
+        return html;
+    }
+    html.push_str("<ol class=\"upcoming-list\">");
+    let today = view.now.date_naive();
+    for event in selected.into_iter().flatten() {
+        html.push_str("<li class=\"upcoming-event\"");
+        match &event.event.end {
+            EventTime::Timed(end) => {
+                write!(html, " data-end-ms=\"{}\"", end.timestamp_millis()).unwrap()
+            }
+            EventTime::AllDay(end) => write!(html, " data-end-date=\"{end}\"").unwrap(),
+        }
+        write!(html, " style=\"--event-color:#{}\" title=\"", event.color).unwrap();
+        escape_into(&mut html, &event.event.calendar);
+        html.push_str(": ");
+        escape_into(&mut html, &event.event.title);
+        html.push_str("\"><span class=\"upcoming-when\">");
+        if let Some((start, end)) = &event.timed
+            && *start < view.now
+            && *end > view.now
+        {
+            html.push_str("Now, until ");
+            if end.date_naive() == today {
+                write!(html, "{}", end.format("%-I:%M %P")).unwrap();
+            } else {
+                write!(html, "{}", end.format("%b %-d")).unwrap();
+            }
+        } else {
+            let day = event.first.max(today);
+            if day == today {
+                html.push_str("Today");
+            } else if day == today + Duration::days(1) {
+                html.push_str("Tomorrow");
+            } else {
+                write!(html, "{}", day.format("%b %-d")).unwrap();
+            }
+            match &event.timed {
+                Some((start, _)) => write!(html, ", {}", start.format("%-I:%M %P")).unwrap(),
+                None => html.push_str(", all day"),
+            }
+        }
+        html.push_str("</span> <span class=\"upcoming-title\">");
+        escape_into(&mut html, &event.event.title);
+        html.push_str("</span></li>");
+    }
+    html.push_str("</ol>");
+    html
 }
 
 pub fn calendar(view: &View) -> String {
@@ -343,6 +457,80 @@ mod tests {
     }
 
     #[test]
+    fn upcoming_selects_nearest_remaining_events_and_advances_after_end() {
+        let events = [
+            timed("2026-11-04T09:00:00-05:00", "2026-11-04T10:00:00-05:00"),
+            timed("2026-11-03T20:00:00-05:00", "2026-11-03T21:51:02-05:00"),
+            timed("2026-11-03T22:00:00-05:00", "2026-11-03T23:00:00-05:00"),
+            timed("2026-11-03T20:00:00-05:00", "2026-11-03T22:00:00-05:00"),
+            timed("2026-11-10T09:00:00-05:00", "2026-11-10T10:00:00-05:00"),
+        ];
+        let mut view = view(&events);
+        let selected = upcoming_spans(&view);
+        for (actual, index) in selected.iter().flatten().zip([3, 2, 0]) {
+            assert!(std::ptr::eq(actual.event, &events[index]));
+        }
+        assert!(selected[2].is_some());
+        view.now = view.now.with_hour(23).unwrap().with_minute(1).unwrap();
+        let selected = upcoming_spans(&view);
+        assert!(std::ptr::eq(
+            selected[0].as_ref().unwrap().event,
+            &events[0]
+        ));
+        assert!(std::ptr::eq(
+            selected[1].as_ref().unwrap().event,
+            &events[4]
+        ));
+        assert!(selected[2].is_none());
+    }
+
+    #[test]
+    fn upcoming_respects_all_day_ends_horizon_and_zero_duration_instants() {
+        let all_day = |start: NaiveDate, end: NaiveDate| Event {
+            title: "Event".into(),
+            calendar: "Events".into(),
+            color: "#123456".into(),
+            start: EventTime::AllDay(start),
+            end: EventTime::AllDay(end),
+        };
+        let december = |day| NaiveDate::from_ymd_opt(2026, 12, day).unwrap();
+        let events = [
+            all_day(day(2), day(3)),
+            all_day(day(2), day(4)),
+            all_day(december(3), december(4)),
+            all_day(december(2), december(3)),
+            timed("2026-11-04T02:51:02Z", "2026-11-04T02:51:02Z"),
+            timed("2026-11-04T02:51:01Z", "2026-11-04T02:51:01Z"),
+        ];
+        let selected = upcoming_spans(&view(&events));
+        for (actual, index) in selected.iter().flatten().zip([1, 4, 3]) {
+            assert!(std::ptr::eq(actual.event, &events[index]));
+        }
+        assert!(selected[2].is_some());
+    }
+
+    #[test]
+    fn upcoming_orders_repeated_dst_hour_by_instant() {
+        let events = [
+            timed("2026-11-01T06:15:00Z", "2026-11-01T06:30:00Z"),
+            timed("2026-11-01T05:30:00Z", "2026-11-01T05:45:00Z"),
+        ];
+        let mut view = view(&events);
+        view.now = chrono_tz::America::New_York
+            .with_ymd_and_hms(2026, 11, 1, 0, 0, 0)
+            .unwrap();
+        let selected = upcoming_spans(&view);
+        assert!(std::ptr::eq(
+            selected[0].as_ref().unwrap().event,
+            &events[1]
+        ));
+        assert!(std::ptr::eq(
+            selected[1].as_ref().unwrap().event,
+            &events[0]
+        ));
+    }
+
+    #[test]
     fn all_day_end_is_exclusive_and_each_occupied_day_is_rendered() {
         let events = [Event {
             title: "Three days".into(),
@@ -392,12 +580,13 @@ mod tests {
             start: EventTime::AllDay(day(3)),
             end: EventTime::AllDay(day(4)),
         }];
-        let html = calendar(&view(&events));
-        assert!(!html.contains("<script>"));
-        assert!(!html.contains("<img"));
-        assert!(!html.contains("onmouseover"));
-        assert!(html.contains("&lt;script&gt;&quot;&amp;&#39;"));
-        assert!(html.contains("--event-color:#8ab4f8"));
+        for html in [calendar(&view(&events)), upcoming(&view(&events))] {
+            assert!(!html.contains("<script>"));
+            assert!(!html.contains("<img"));
+            assert!(!html.contains("onmouseover"));
+            assert!(html.contains("&lt;script&gt;&quot;&amp;&#39;"));
+            assert!(html.contains("--event-color:#8ab4f8"));
+        }
         assert_eq!(safe_color("#aBc123"), "aBc123");
         assert_eq!(safe_color("abc"), "8ab4f8");
     }
