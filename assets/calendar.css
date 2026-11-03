@@ -61,12 +61,11 @@ body {
 .clock sup { position: relative; top: -0.12em; margin-left: 5px; font-size: 0.37em; letter-spacing: 0; vertical-align: super; color: var(--muted); }
 .meridiem { font-size: 0.37em; font-weight: 400; letter-spacing: 0; color: var(--muted); }
 #upcoming { margin-top: 6px; }
-#upcoming h2 { margin: 0 0 4px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .upcoming-list { display: flex; margin: 0; padding: 0; list-style: none; }
 .upcoming-event { flex: 1 1 0; min-width: 0; margin-left: 6px; padding: 5px 6px; border: 1px solid var(--line); border-left: 3px solid var(--event-color); border-radius: 5px; background: var(--surface); }
 .upcoming-event:first-child { margin-left: 0; }
 .upcoming-when { display: block; color: var(--muted); font-size: 10px; line-height: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.upcoming-title { display: block; font-size: 12px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upcoming-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; height: 32px; font-size: 12px; line-height: 16px; overflow: hidden; word-wrap: break-word; }
 .upcoming-empty { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .legend { margin-bottom: 10px; color: var(--muted); font-size: 11px; line-height: 1.8; }
 .legend-kind, .legend-calendar { display: inline-block; margin-right: 15px; vertical-align: middle; }

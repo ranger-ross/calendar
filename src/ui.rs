@@ -172,7 +172,6 @@ fn upcoming_spans<'a>(view: &View<'a>) -> [Option<Span<'a>>; 3] {
 
 pub fn upcoming(view: &View) -> String {
     let mut html = String::with_capacity(1_200);
-    html.push_str("<h2>Upcoming</h2>");
     let selected = upcoming_spans(view);
     if selected[0].is_none() {
         let message = if view.updated_at.is_none() {
