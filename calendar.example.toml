@@ -1,0 +1,26 @@
+# Copy to calendar.toml. This server is for a trusted local network only.
+bind = "0.0.0.0:8080"
+# Set the display's IANA timezone.
+timezone = "UTC"
+# Feed refresh interval. The browser refreshes its view every minute.
+refresh_seconds = 300
+# Optional calendar legend. Hidden when omitted.
+show_legend = false
+
+[[calendars]]
+# Replace this example URL with a direct ICS feed URL.
+url = "https://example.com/calendar.ics"
+color = "#31a35e"
+# Optional. If omitted, the name comes from the ICS feed.
+name = "Events"
+
+# Add one entry per calendar. Treat private ICS URLs like passwords.
+# [[calendars]]
+# url = "https://example.com/team.ics"
+# color = "#039be5"
+# name = "Team"
+
+# [[calendars]]
+# url = "https://example.com/community.ics"
+# color = "#e67c73"
+# name = "Community"

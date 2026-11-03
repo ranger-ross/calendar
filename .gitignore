@@ -1,1 +1,5 @@
 /target
+/calendar.toml
+/google-token.json
+/google-token.json.*
+/.google-token.json.*.tmp
