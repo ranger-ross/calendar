@@ -72,16 +72,14 @@ body {
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: baseline; border-radius: 2px; }
 .legend .legend-all-day { width: 14px; background: var(--muted); }
 .legend .legend-timed { width: 14px; border-left: 3px solid var(--muted); background: var(--surface); }
-.month-table { --calendar-overhead: 185px; table-layout: fixed; border-collapse: collapse; width: 100%; }
-.month-table.with-legend { --calendar-overhead: 215px; }
-.month-table th { padding: 0 0 8px 9px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.month-table abbr { text-decoration: none; border: 0; }
+.calendar-table { --calendar-overhead: 185px; table-layout: fixed; border-collapse: collapse; width: 100%; }
+.calendar-table.with-legend { --calendar-overhead: 215px; }
+.calendar-table th { padding: 0 0 8px 9px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.calendar-table abbr { text-decoration: none; border: 0; }
 .day { padding: 0; border: 1px solid var(--line); background: var(--surface); vertical-align: top; }
 .day.adjacent { background: var(--surface-muted); }
 .day.today { background: var(--today); }
-.day-inner { position: relative; height: calc((100vh - var(--calendar-overhead)) / 5); min-height: 68px; }
-.weeks-4 .day-inner { height: calc((100vh - var(--calendar-overhead)) / 4); }
-.weeks-6 .day-inner { height: calc((100vh - var(--calendar-overhead)) / 6); }
+.day-inner { position: relative; height: calc((100vh - var(--calendar-overhead)) / 4); min-height: 68px; }
 .day-number { display: inline-block; margin: 5px 0 0 6px; min-width: 24px; height: 24px; border-radius: 50%; font-size: 12px; line-height: 24px; font-weight: 600; text-align: center; }
 .month-name { margin-left: 2px; color: var(--muted); font-size: 11px; }
 .adjacent .day-number { color: var(--muted); font-weight: 400; }
@@ -117,14 +115,14 @@ body {
   .dashboard-header { display: block; min-height: 0; }
   .clock-panel { width: auto; }
   .header-panel { width: auto; margin: 12px 0 0; }
-  .month-table { --calendar-overhead: 290px; }
-  .month-table.with-legend { --calendar-overhead: 320px; }
+  .calendar-table { --calendar-overhead: 290px; }
+  .calendar-table.with-legend { --calendar-overhead: 320px; }
 }
 @media (max-width: 480px) {
   .dashboard { padding: 14px 7px; }
   .date { font-size: 16px; }
   .clock { font-size: 54px; }
-  .month-table th { padding-left: 4px; font-size: 9px; }
+  .calendar-table th { padding-left: 4px; font-size: 9px; }
   .day-inner { min-height: 108px; }
   .day-number { margin-left: 2px; }
   .events { left: 2px; right: 2px; }

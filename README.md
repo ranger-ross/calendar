@@ -7,7 +7,7 @@
 
 A small, single-binary Rust web server for a read-only ICS calendar display. Configure calendar feed URLs and colors in a TOML file. Assets are embedded; there is no Node.js build, CDN, or separate web directory to deploy.
 
-The display shows the current month in seven Sunday-first columns, with the date and a 12-hour clock above it. Seconds are superscript. The first day of each month includes its month name beside the day number. Dark is the default theme; the top-right button switches to light and remembers the choice in that browser. All-day events use filled color bars; timed events show a time range and a color accent. Multi-day events appear on each occupied date.
+The display shows four weeks in seven Sunday-first columns, with the current week always in the top row and the next three weeks below it. The view continues across month and year boundaries. The date and a 12-hour clock appear above the grid, with superscript seconds. The first day of each month includes its month name beside the day number. Dark is the default theme; the top-right button switches to light and remembers the choice in that browser. All-day events use filled color bars; timed events show a time range and a color accent. Multi-day events appear on each occupied date.
 
 The relative last-synced time appears beside the theme button only when the last successful sync was more than five minutes ago. It hides again after a successful sync. Loading and update errors remain visible immediately in the same header status area.
 
@@ -88,9 +88,7 @@ Feed providers control which events they export and how quickly changes appear. 
 
 Open `http://localhost:8080/` on the server, or `http://SERVER_ADDRESS:8080/` from another device. `serve` is also available as an explicit subcommand. Configuration changes require restarting the server.
 
-The clock ticks every second without a network request. The page checks the server every minute and when it becomes visible again. The server downloads the feeds at the configured interval and displays events overlapping the month grid, including visible dates from adjacent months. The grid rolls over automatically at the start of a month. Busy dates remain scrollable rather than dropping events.
-
-The footer shows the age of the last successful sync, such as "less than a minute ago" or "3 minutes ago". It updates locally as time passes, including while the server or a feed is unavailable.
+The clock ticks every second without a network request. The page checks the server every minute and when it becomes visible again. The server downloads the feeds at the configured interval and displays events overlapping the four-week grid. The grid advances each Sunday in the configured display timezone, including when a page stays open across midnight. Busy dates remain scrollable rather than dropping events.
 
 If any feed cannot be loaded, the running server retains the last complete successful calendar in memory and displays a stale-data message. If the browser loses the server, it keeps its existing display and reports the connection failure. A server restart clears the in-memory calendar, so the feeds must be reachable to load events again. Synchronization errors are logged to stderr without the feed URLs.
 

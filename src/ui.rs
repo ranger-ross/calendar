@@ -1,4 +1,4 @@
-use crate::model::{Event, EventTime, UPCOMING_DAYS, View};
+use crate::model::{DISPLAY_WEEKS, Event, EventTime, UPCOMING_DAYS, View, calendar_range};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Offset, Timelike};
 use chrono_tz::Tz;
 use std::fmt::Write;
@@ -76,7 +76,7 @@ pub fn page(view: &View) -> String {
     html.push_str("</span></div><button id=\"theme-toggle\" type=\"button\" aria-label=\"Toggle light theme\" aria-pressed=\"false\">Light theme</button></div><section id=\"upcoming\" aria-label=\"Upcoming events\">");
     html.push_str(&upcoming(view));
     html.push_str(
-        "</section></div></header><section id=\"calendar\" aria-label=\"Monthly calendar\">",
+        "</section></div></header><section id=\"calendar\" aria-label=\"Four-week calendar\">",
     );
     html.push_str(&calendar(view));
     html.push_str("</section></main><script src=\"/calendar.js\"></script></body></html>");
@@ -235,6 +235,7 @@ pub fn upcoming(view: &View) -> String {
 
 pub fn calendar(view: &View) -> String {
     let mut html = String::with_capacity(20_000);
+    let (range_start, range_end) = calendar_range(view.now.date_naive());
     let mut events: Vec<_> = view
         .events
         .iter()
@@ -272,7 +273,7 @@ pub fn calendar(view: &View) -> String {
         }
         html.push_str("</div>");
     }
-    write!(html, "<table class=\"month-table weeks-{}{}\"><caption class=\"sr-only\">{}; events in {}</caption><thead><tr>", view.weeks, if view.show_legend { " with-legend" } else { "" }, view.now.format("%B %Y"), view.now.timezone()).unwrap();
+    write!(html, "<table class=\"calendar-table{}\"><caption class=\"sr-only\">{} to {}; events in {}</caption><thead><tr>", if view.show_legend { " with-legend" } else { "" }, range_start.format("%B %-d, %Y"), (range_end - Duration::days(1)).format("%B %-d, %Y"), view.now.timezone()).unwrap();
     for (short, full) in [
         ("Sun", "Sunday"),
         ("Mon", "Monday"),
@@ -290,10 +291,10 @@ pub fn calendar(view: &View) -> String {
     }
     html.push_str("</tr></thead><tbody>");
     let today = view.now.date_naive();
-    for week in 0..view.weeks {
+    for week in 0..DISPLAY_WEEKS {
         html.push_str("<tr>");
         for weekday in 0..7 {
-            let day = view.range_start + Duration::days((week * 7 + weekday) as i64);
+            let day = range_start + Duration::days((week * 7 + weekday) as i64);
             html.push_str("<td class=\"day");
             if day.month() != today.month() || day.year() != today.year() {
                 html.push_str(" adjacent");
@@ -446,13 +447,52 @@ mod tests {
             now: chrono_tz::America::New_York
                 .with_ymd_and_hms(2026, 11, 3, 21, 51, 2)
                 .unwrap(),
-            range_start: day(1),
-            weeks: 5,
             show_legend: false,
             events,
             updated_at: None,
             error: None,
         }
+    }
+
+    #[test]
+    fn calendar_advances_at_local_sunday_and_clips_events_to_four_weeks() {
+        let events: Vec<_> = [
+            ("2026-10-31", "2026-11-02", "Carryover"),
+            ("2026-11-07", "2026-11-08", "Closing week"),
+            ("2026-11-28", "2026-11-29", "Fourth Saturday"),
+            ("2026-11-29", "2026-11-30", "New fourth week"),
+            ("2026-12-05", "2026-12-06", "New last Saturday"),
+            ("2026-12-06", "2026-12-07", "Outside window"),
+        ]
+        .into_iter()
+        .map(|(start, end, title)| Event {
+            title: title.into(),
+            calendar: "Events".into(),
+            color: "#123456".into(),
+            start: EventTime::AllDay(NaiveDate::parse_from_str(start, "%Y-%m-%d").unwrap()),
+            end: EventTime::AllDay(NaiveDate::parse_from_str(end, "%Y-%m-%d").unwrap()),
+        })
+        .collect();
+        let mut view = view(&events);
+        view.now = chrono_tz::Asia::Tokyo
+            .with_ymd_and_hms(2026, 11, 7, 23, 59, 59)
+            .unwrap();
+        let before = calendar(&view);
+        assert!(before.contains("Carryover"));
+        assert!(before.contains("Closing week"));
+        assert!(before.contains("Fourth Saturday"));
+        assert!(!before.contains("New fourth week"));
+        assert!(!before.contains("New last Saturday"));
+        assert!(!before.contains("Outside window"));
+
+        view.now += Duration::seconds(1);
+        let after = calendar(&view);
+        assert!(!after.contains("Carryover"));
+        assert!(!after.contains("Closing week"));
+        assert!(after.contains("Fourth Saturday"));
+        assert!(after.contains("New fourth week"));
+        assert!(after.contains("New last Saturday"));
+        assert!(!after.contains("Outside window"));
     }
 
     #[test]

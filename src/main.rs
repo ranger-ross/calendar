@@ -16,7 +16,7 @@ use axum::{
 use chrono::{DateTime, NaiveDate, Offset, Utc};
 use clap::{Parser, Subcommand};
 use config::Config;
-use model::{Event, View, fetch_range, month_range};
+use model::{Event, View, fetch_range};
 use serde::Serialize;
 use std::{
     path::PathBuf,
@@ -55,11 +55,8 @@ struct App {
 impl Snapshot {
     fn view(&self, config: &Config) -> View<'_> {
         let now = Utc::now().with_timezone(&config.timezone);
-        let (start, end) = month_range(now.date_naive());
         View {
             now,
-            range_start: start,
-            weeks: ((end - start).num_days() / 7) as usize,
             show_legend: config.show_legend,
             events: &self.events,
             updated_at: self.updated_at,
